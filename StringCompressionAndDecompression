@@ -1,0 +1,105 @@
+using System;
+using System.IO;
+using Ionic.Zlib;
+using CompressionMode = Ionic.Zlib.CompressionMode;
+using CompressionLevel = Ionic.Zlib.CompressionLevel;
+using System.Text;
+
+namespace ZlibExample
+{
+    /// <summary>
+    /// A class demonstrating string compression and decompression using the Ionic.Zlib library.
+    /// </summary>
+    /// <author>Ayush Jaiswal</author>
+    class Program
+    {
+        static void Main(string[] args)
+        {
+	    Console.WriteLine("Enter the string you want to process:");
+	    string originalString = Console.ReadLine();
+
+            string processedData = ProcessInputData(originalString);
+            Console.WriteLine("Processed Data:");
+            Console.WriteLine(processedData);
+
+            Console.ReadLine();
+        }
+
+        //If the string passed is Base64 then the string is decompressed but if it is string it will be compressed
+        static string ProcessInputData(string data)
+        {
+            byte[] bytes;
+            bool isBase64 = IsBase64String(data);
+
+            try
+            {
+                if (isBase64)
+                {
+                    bytes = Convert.FromBase64String(data);
+                    return DecompressBytes(bytes) ?? data; // If base64 decoded, try decompressing
+                }
+                else
+                {
+                    return CompressString(data); // If not base64, compress as zlib
+                }
+            }
+            catch (FormatException)
+            {
+                return data; // Return original data if decoding fails
+            }
+        }
+
+        //Check if the string passed is base64 or not.
+        static bool IsBase64String(string data)
+        {
+            try
+            {
+                Convert.FromBase64String(data);
+                return true;
+            }
+            catch (FormatException)
+            {
+                return false;
+            }
+        }
+
+        // Compresses the input string into bytes using Zlib compression.
+        static string CompressString(string text)
+        {
+            byte[] buffer = Encoding.UTF8.GetBytes(text);
+
+            using (MemoryStream ms = new MemoryStream())
+            {
+                using (ZlibStream deflateStream = new ZlibStream(ms, CompressionMode.Compress, CompressionLevel.BestCompression))
+                {
+                    deflateStream.Write(buffer, 0, buffer.Length);
+                }
+                return Convert.ToBase64String(ms.ToArray());
+            }
+        }
+
+        // Decompresses the input compressed bytes into a string using Zlib decompression.
+        static string DecompressBytes(byte[] compressedBytes)
+        {
+            try
+            {
+                using (MemoryStream ms = new MemoryStream(compressedBytes))
+                {
+                    using (ZlibStream deflateStream = new ZlibStream(ms, CompressionMode.Decompress))
+                    {
+                        using (MemoryStream decompressedMs = new MemoryStream())
+                        {
+                            deflateStream.CopyTo(decompressedMs);
+                            byte[] decompressedBytes = decompressedMs.ToArray();
+                            return System.Text.Encoding.UTF8.GetString(decompressedBytes);
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                return null; // Return null if decompression fails
+            }
+        }
+    } 
+}
